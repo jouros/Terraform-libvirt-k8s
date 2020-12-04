@@ -1,4 +1,4 @@
-# Terraform and Ansible scripts to deploy K8s Kubernetes cluster on Debian Buster running on KVM
+# Terraform and Ansible scripts to deploy K8s Kubernetes cluster on Debian Buster vm running on KVM
 
 Terraform v0.13.5
 
