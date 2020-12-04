@@ -1,0 +1,162 @@
+---
+- hosts: master1 
+  become: yes
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+  - name: Update package list
+    apt:
+      update_cache: yes
+    register: task_result
+    until: task_result is success
+    retries: 20
+    delay: 2
+
+  - name: Install packages that allow apt to be used over HTTPS
+    apt:
+      name: "{{ packages }}"
+      state: present
+    register: task_result
+    until: task_result is success
+    retries: 20
+    delay: 2
+    vars:
+      packages:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gpg-agent
+      - software-properties-common
+      - jq
+      - nfs-common
+      - golang-go
+      - acct
+      - gnupg
+
+  - name: Add an apt signing key for Docker
+    apt_key:
+      url: https://download.docker.com/linux/debian/gpg
+      state: present
+
+  - name: Add apt repository for stable version
+    apt_repository:
+      repo: deb [arch=amd64] https://download.docker.com/linux/debian buster stable
+      state: present
+      update_cache: true
+
+  - name: Install docker and its dependecies
+    apt: 
+      name: "{{ packages }}"
+      state: present
+    register: task_result
+    until: task_result is success
+    retries: 20
+    delay: 2
+    vars:
+      packages:
+      - docker-ce 
+      - docker-ce-cli 
+      - containerd.io
+    notify:
+      - docker status
+
+  - name: Add joro to docker group
+    user:
+      name: joro 
+      group: docker
+
+  - name: Upload custom Docker args
+    copy:
+      src: "daemon.json"
+      dest: "/etc/docker/"
+      owner: "root"
+      group: "root"
+      mode: "0644"
+
+  - name: Set up dockerd
+    command: mkdir -p /etc/systemd/system/docker.service.d
+
+  - name: Restart docker and do daemon-reload to pick up config changes
+    systemd:
+      name: docker
+      state: restarted
+      enabled: yes
+      daemon_reload: yes
+
+  - name: Remove swapfile from /etc/fstab
+    mount:
+      name: "{{ item }}"
+      fstype: swap
+      state: absent
+    with_items:
+      - swap
+      - none
+
+  - name: Disable swap
+    command: swapoff -a
+    when: ansible_swaptotal_mb > 0
+
+  - name: Add an apt signing key for Kubernetes
+    apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+
+  - name: Adding apt repository for Kubernetes
+    apt_repository:
+      repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+      filename: kubernetes.list
+
+  - name: Install Kubernetes binaries
+    apt:
+      name: "{{ packages }}"
+      state: present
+    register: task_result
+    until: task_result is success
+    retries: 20
+    delay: 2
+    vars:
+      packages:
+        - kubelet
+        - kubeadm
+        - kubectl
+
+# Reset is needed if you re-install cluster 
+#  - name: Reset kubeadm
+#    command: kubeadm reset --force
+#    register: kube_reset
+#
+#  - debug: var=kube_reset.stdout_lines
+
+  - name: Initialize the Kubernetes cluster using kubeadm
+    command: kubeadm init --node-name master1 
+    register: kube_init
+
+  - debug: var=kube_init.stdout_lines
+
+  - name: Setup kubeconfig for joro user
+    command: "{{ item }}"
+    with_items:
+     - mkdir -p /home/joro/.kube
+     - cp -i /etc/kubernetes/admin.conf /home/joro/.kube/config
+     - chown joro:joro /home/joro/.kube/config
+
+  - name: Install weave pod network
+    become: false
+    shell: kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+    register: weave_url
+
+  - debug: var=weave_url.stdout_lines
+
+  - name: Generate join command 
+    command: kubeadm token create --print-join-command
+    register: join_command
+
+  - name: Copy join command to local file
+    become: no
+    local_action: copy content="{{ join_command.stdout_lines[0] }}" dest="./join-command"
+
+  handlers:
+    - name: docker status
+      service: name=docker state=started
+...
