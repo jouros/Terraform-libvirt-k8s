@@ -1,9 +1,7 @@
 # Terraform and Ansible scripts to deploy K8s Kubernets cluster on Debian Buster KVM vm
 
-$ terraform version
 Terraform v0.13.5
 
-$ ansible --version
 ansible 2.9.6
 
 ## Initialize empty folder
