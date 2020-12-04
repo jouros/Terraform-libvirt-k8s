@@ -152,6 +152,7 @@ resource "libvirt_domain" "k8s" {
       port        = 22
     }
 
+# *** PUT YOUR LOCAL ACTIONS HERE ***
     provisioner "remote-exec" {
       inline = [
         "touch huuhaa.txt",
