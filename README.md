@@ -49,11 +49,11 @@ ansible-playbook node-playbook.yml
 ### K8s is ready, have fun :)
 
 joro@master1:~$ kubectl get nodes
-NAME      STATUS   ROLES    AGE     VERSION
-master1   Ready    master   27m     v1.19.4
-worker1   Ready    <none>   4m18s   v1.19.4
-worker2   Ready    <none>   4m18s   v1.19.4
-worker3   Ready    <none>   4m18s   v1.19.4
-worker4   Ready    <none>   4m18s   v1.19.4
+* NAME      STATUS   ROLES    AGE     VERSION
+* master1   Ready    master   27m     v1.19.4
+* worker1   Ready    <none>   4m18s   v1.19.4
+* worker2   Ready    <none>   4m18s   v1.19.4
+* worker3   Ready    <none>   4m18s   v1.19.4
+* worker4   Ready    <none>   4m18s   v1.19.4
 
 
