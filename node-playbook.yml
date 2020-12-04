@@ -1,0 +1,159 @@
+---
+- hosts: worker* 
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  become: true
+  tasks:
+  - name: Update package list
+    apt:
+      update_cache: yes
+    register: task_result
+    until: task_result is success
+    retries: 20
+    delay: 2
+
+  - name: Install packages that allow apt to be used over HTTPS
+    apt:
+      name: "{{ packages }}"
+      state: present
+    register: task_result
+    until: task_result is success
+    retries: 20
+    delay: 2
+    vars:
+      packages:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gpg-agent
+      - software-properties-common
+      - nfs-common
+      - jq
+      - acct
+      - gnupg
+
+  - name: Add an apt signing key for Docker
+    apt_key:
+      url: https://download.docker.com/linux/debian/gpg
+      state: present
+
+  - name: Add apt repository for stable version
+    apt_repository:
+      repo: deb [arch=amd64] https://download.docker.com/linux/debian buster stable
+      state: present
+
+  - name: Install docker and its dependecies
+    apt: 
+      name: "{{ packages }}"
+      state: present
+    register: task_result
+    until: task_result is success
+    retries: 20
+    delay: 2
+    vars:
+      packages:
+      - docker-ce 
+      - docker-ce-cli 
+      - containerd.io
+    notify:
+      - docker status
+
+  - name: Add joro to docker group
+    user:
+      name: joro 
+      group: docker
+
+  - name: Upload custom Docker args
+    copy:
+      src: "daemon.json"
+      dest: "/etc/docker/"
+      owner: "root"
+      group: "root"
+      mode: "0644"
+
+  - name: Set up dockerd
+    command: mkdir -p /etc/systemd/system/docker.service.d
+
+
+  - name: Restart docker and do daemon-reload to pick up config changes
+    systemd:
+      name: docker
+      state: restarted
+      enabled: yes
+      daemon_reload: yes
+
+  - name: Remove swapfile from /etc/fstab
+    mount:
+      name: "{{ item }}"
+      fstype: swap
+      state: absent
+    with_items:
+      - swap
+      - none
+
+  - name: Disable swap
+    command: swapoff -a
+    when: ansible_swaptotal_mb > 0
+
+  - name: Add an apt signing key for Kubernetes
+    apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+
+  - name: Adding apt repository for Kubernetes
+    apt_repository:
+      repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+      filename: kubernetes.list
+
+  - name: Install Kubernetes binaries
+    apt: 
+      name: "{{ packages }}"
+      state: present
+    register: task_result
+    until: task_result is success
+    retries: 20
+    delay: 2
+    vars:
+      packages:
+        - kubelet 
+        - kubeadm 
+        - kubectl 
+
+# Reset is needed if you re-install cluster
+#  - name: Reset kubeadm
+#    command: kubeadm reset --force
+#    register: kube_reset
+#
+#  - debug: var=kube_reset.stdout_lines
+
+  - name: Upload custom KUBELET_EXTRA_ARGS
+    copy:
+      src: "kubelet"
+      dest: "/etc/default/"
+      owner: "root"
+      group: "root"
+      mode: "0644"
+
+  - name: Restart Kubelet and do daemon-reload to pick up config changes
+    systemd:
+      name: kubelet
+      state: restarted
+      daemon_reload: yes
+
+  - name: Copy the join command to server location
+    copy: src=join-command dest=/tmp/join-command.sh mode=0777
+
+  - name: Join the node to cluster
+    command: sh /tmp/join-command.sh
+    register: node_join
+
+  - debug: var=node_join.stdout_lines  
+
+  - name: Remove local join file
+    local_action: file path=join-command state=absent
+    
+  handlers:
+    - name: docker status
+      service: name=docker state=started
+...
