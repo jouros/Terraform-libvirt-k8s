@@ -72,7 +72,7 @@ resource "libvirt_volume" "debian" {
   name   = "${var.vm_names[count.index]}.qcow2"
   count = length(var.vm_names)
   pool   = "default"
-  source = "https://laotzu.ftp.acc.umu.se/cdimage/openstack/current/debian-10.6.2-20201124-openstack-amd64.qcow2"
+  source = "https://cdimage.debian.org/cdimage/openstack/current/debian-10-openstack-amd64.qcow2"
   format = "qcow2"
 }
 
