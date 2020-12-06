@@ -13,11 +13,11 @@ wget https://github.com/dmacvicar/terraform-provider-libvirt/releases/download/v
 
 tar xvfz terraform-provider-libvirt-0.6.3+git.1604843676.67f4f2aa.Ubuntu_20.04.amd64.tar.gz
 
-cd .terraform/plugins
+cd .terraform.d/ in your home directory
 
-mkdir -p ./registry.terraform.io/dmacvicar/libvirt/0.6.3/linux_amd64
+mkdir -p plugins/registry.terraform.io/dmacvicar/libvirt/0.6.3/linux_amd64
 
-mv terraform-provider-libvirt .terraform/plugins/registry.terraform.io/dmacvicar/libvirt/0.6.3/linux_amd64/
+mv terraform-provider-libvirt .terraform.d/plugins/registry.terraform.io/dmacvicar/libvirt/0.6.3/linux_amd64/
 
 Note! You probably have to setup some libvirt & qemu settings for 'permission denied' or virsh without sudo etc. things
 
