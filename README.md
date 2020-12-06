@@ -23,6 +23,7 @@ Note! You probably have to setup some libvirt & qemu settings for 'permission de
 
 Check parameter details for Terraform libvirt provider: https://github.com/dmacvicar/terraform-provider-libvirt
 
+Check that debian image download url works before using this script. 
 
 ### Terraform init
 
