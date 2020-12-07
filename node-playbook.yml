@@ -149,9 +149,6 @@
     register: node_join
 
   - debug: var=node_join.stdout_lines  
-
-  - name: Remove local join file
-    local_action: file path=join-command state=absent
     
   handlers:
     - name: docker status
